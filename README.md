@@ -55,12 +55,16 @@ docker run -d \
   -p 8080:8080 \
   -v /your/local/path/data:/app/data \
   -e API_TOKEN=your_secret_token \
+  -e JWT_SECRET=your_jwt_secret_key \
   --name sms-dashboard \
   ghcr.io/jjss520/sms-dashboard-dd:latest
 ```
 
 - **访问地址**: `http://localhost:8080`
 - **默认账号**: `admin` / `admin`
+- **重要配置**:
+  - `API_TOKEN`: API接收接口的鉴权Token（必填）
+  - `JWT_SECRET`: JWT签名密钥，用于登录认证（建议自定义，默认值：jwdesxxdf817D）
 
 ## 📲 Android 转发器配置
 
