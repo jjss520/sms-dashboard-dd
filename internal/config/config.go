@@ -5,7 +5,8 @@ import (
 )
 
 type Config struct {
-	Port         string
+	Port         string // API 端口
+	WebPort      string // 前端面板端口
 	APIToken     string // For Android SMS Post
 	JWTSecret    string // For Dashboard Login
 	DatabasePath string
@@ -15,6 +16,7 @@ type Config struct {
 func LoadConfig() *Config {
 	return &Config{
 		Port:         getEnv("PORT", "8080"),
+		WebPort:      getEnv("WEB_PORT", "3000"),
 		APIToken:     getEnv("API_TOKEN", "uyejxhhshfe"),
 		JWTSecret:    getEnv("JWT_SECRET", "jwdesxxdf817D"),
 		DatabasePath: getEnv("DB_PATH", "sms.db"),

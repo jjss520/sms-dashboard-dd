@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"sms-dashboard/internal/database"
@@ -225,5 +226,102 @@ func (h *SMSHandler) LoadMore(c *gin.Context) {
 		"device":  device,
 		"smsList": smsList,
 		"hasMore": hasMore,
+	})
+}
+
+func (h *SMSHandler) LoadAll(c *gin.Context) {
+	device := c.Query("device")
+
+	if device == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "device parameter is required"})
+		return
+	}
+
+	var smsList []model.SMS
+	listQuery := database.DB.Order("created_at desc")
+	
+	// 处理"未知机型"
+	if device == "未知机型" {
+		listQuery = listQuery.Where("device IS NULL OR device = ''")
+	} else {
+		listQuery = listQuery.Where("device = ?", device)
+	}
+	listQuery.Find(&smsList)
+
+	c.JSON(http.StatusOK, gin.H{
+		"device":  device,
+		"smsList": smsList,
+		"total":   len(smsList),
+	})
+}
+
+func (h *SMSHandler) BatchDelete(c *gin.Context) {
+	var req struct {
+		IDs []uint `json:"ids" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	if len(req.IDs) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No IDs provided"})
+		return
+	}
+
+	result := database.DB.Delete(&model.SMS{}, req.IDs)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("Successfully deleted %d records", result.RowsAffected),
+		"count":   result.RowsAffected,
+	})
+}
+
+func (h *SMSHandler) Search(c *gin.Context) {
+	keyword := c.Query("keyword")
+	pageStr := c.DefaultQuery("page", "1")
+	pageSizeStr := c.DefaultQuery("pageSize", "20")
+
+	if keyword == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "keyword parameter is required"})
+		return
+	}
+
+	page, _ := strconv.Atoi(pageStr)
+	pageSize, _ := strconv.Atoi(pageSizeStr)
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 20
+	}
+
+	var smsList []model.SMS
+	var total int64
+
+	// 模糊搜索: content, sender, phone, device
+	searchPattern := "%" + keyword + "%"
+	query := database.DB.Model(&model.SMS{}).Where(
+		"content LIKE ? OR sender LIKE ? OR phone LIKE ? OR device LIKE ?",
+		searchPattern, searchPattern, searchPattern, searchPattern,
+	)
+
+	query.Count(&total)
+
+	offset := (page - 1) * pageSize
+	query.Order("created_at desc").Offset(offset).Limit(pageSize).Find(&smsList)
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": smsList,
+		"pagination": gin.H{
+			"page":     page,
+			"pageSize": pageSize,
+			"total":    total,
+		},
 	})
 }

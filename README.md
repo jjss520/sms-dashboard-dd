@@ -47,14 +47,32 @@
 
 我们推荐使用 Docker 进行生产环境部署，以实现数据的持久化。
 
+**单端口模式（前后端一体）:**
 ```bash
 docker run -d \
   -p 8080:8080 \
   -v /your/local/path/data:/app/data \
   -e API_TOKEN=your_secret_token \
   --name sms-dashboard \
-  your-docker-image-name
+  ghcr.io/jjss520/sms-dashboard-dd:latest
 ```
+
+**双端口模式（前后端分离）:**
+```bash
+docker run -d \
+  -p 8080:8080 \
+  -p 3000:3000 \
+  -v /your/local/path/data:/app/data \
+  -e API_TOKEN=your_secret_token \
+  -e PORT=8080 \
+  -e WEB_PORT=3000 \
+  --name sms-dashboard \
+  ghcr.io/jjss520/sms-dashboard-dd:latest
+```
+
+- **前端面板**: `http://localhost:3000`
+- **API 服务**: `http://localhost:8080`
+- **默认账号**: `admin` / `admin`
 
 ## 📲 Android 转发器配置
 

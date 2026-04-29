@@ -49,7 +49,10 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			authorized.GET("/sms/list", smsHandler.List)
 			authorized.GET("/sms/grouped", smsHandler.GroupedList)
 			authorized.GET("/sms/load-more", smsHandler.LoadMore)
+			authorized.GET("/sms/load-all", smsHandler.LoadAll)
 			authorized.DELETE("/sms/:id", smsHandler.Delete)
+			authorized.POST("/sms/batch-delete", smsHandler.BatchDelete)
+			authorized.GET("/sms/search", smsHandler.Search)
 		}
 	}
 

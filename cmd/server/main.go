@@ -7,7 +7,8 @@ import (
 	"net/http"
 	"sms-dashboard/internal/config"
 	"sms-dashboard/internal/database"
-	"sms-dashboard/internal/router"
+	"sms-dashboard/internal/handler"
+	"sms-dashboard/internal/middleware"
 	"sms-dashboard/web"
 	"strings"
 
@@ -19,7 +20,77 @@ func main() {
 
 	database.InitDB(cfg.DatabasePath)
 
-	r := router.SetupRouter(cfg)
+	// API Router (only API routes)
+	apiRouter := setupAPIRouter(cfg)
+
+	// Web Router (only frontend)
+	webRouter := setupWebRouter(cfg)
+
+	// Start API server
+	go func() {
+		log.Printf("API Server starting on port %s", cfg.Port)
+		if err := apiRouter.Run(":" + cfg.Port); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	// Start Web server
+	log.Printf("Web Panel starting on port %s", cfg.WebPort)
+	if err := webRouter.Run(":" + cfg.WebPort); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func setupAPIRouter(cfg *config.Config) *gin.Engine {
+	r := gin.New()
+	r.Use(gin.Recovery())
+
+	// CORS middleware
+	r.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, X-Token")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
+
+	authHandler := handler.NewAuthHandler(cfg)
+	smsHandler := handler.NewSMSHandler()
+
+	// Initialize default user
+	authHandler.InitDefaultUser()
+
+	api := r.Group("/api")
+	{
+		api.POST("/login", authHandler.Login)
+		api.POST("/sms", middleware.APITokenMiddleware(cfg), smsHandler.Receive)
+
+		// Private (Protected by JWT)
+		authorized := api.Group("/")
+		authorized.Use(middleware.AuthMiddleware(cfg))
+		{
+			authorized.POST("/change-password", authHandler.ChangePassword)
+			authorized.GET("/sms/list", smsHandler.List)
+			authorized.GET("/sms/grouped", smsHandler.GroupedList)
+			authorized.GET("/sms/load-more", smsHandler.LoadMore)
+			authorized.GET("/sms/load-all", smsHandler.LoadAll)
+			authorized.DELETE("/sms/:id", smsHandler.Delete)
+			authorized.POST("/sms/batch-delete", smsHandler.BatchDelete)
+			authorized.GET("/sms/search", smsHandler.Search)
+		}
+	}
+
+	return r
+}
+
+func setupWebRouter(cfg *config.Config) *gin.Engine {
+	r := gin.New()
+	r.Use(gin.Recovery())
 
 	// Serve Frontend
 	distFS, err := fs.Sub(web.DistFS, "dist")
@@ -28,15 +99,9 @@ func main() {
 	}
 
 	r.NoRoute(func(c *gin.Context) {
-		// 如果是 API 请求，返回 404
-		if strings.HasPrefix(c.Request.URL.Path, "/api") {
-			c.JSON(http.StatusNotFound, gin.H{"error": "API route not found"})
-			return
-		}
-
 		path := strings.TrimPrefix(c.Request.URL.Path, "/")
 
-		// 处理根路径或前端路由
+		// Handle root path or frontend routes
 		if path == "" || !strings.Contains(path, ".") {
 			file, err := distFS.Open("index.html")
 			if err != nil {
@@ -53,7 +118,7 @@ func main() {
 			return
 		}
 
-		// 正常提供静态文件 (assets 等)
+		// Serve static files (assets etc)
 		f, err := distFS.Open(path)
 		if err != nil {
 			c.Status(http.StatusNotFound)
@@ -64,6 +129,5 @@ func main() {
 		c.FileFromFS(path, http.FS(distFS))
 	})
 
-	log.Printf("Server starting on port %s", cfg.Port)
-	r.Run(":" + cfg.Port)
+	return r
 }
