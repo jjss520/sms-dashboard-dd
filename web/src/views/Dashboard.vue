@@ -1,10 +1,10 @@
 <template>
   <div class="min-h-screen bg-gray-50 p-4 md:p-8">
     <div class="max-w-6xl mx-auto">
-      <div class="flex items-center justify-between mb-6 gap-4">
-        <h1 class="text-xl md:text-3xl font-bold text-gray-800 truncate">短信管理面板</h1>
-        <div class="flex items-center gap-2 flex-shrink-0">
-            <input v-model="searchKeyword" @keyup.enter="handleSearch" type="text" placeholder="搜索内容、发件人、手机号、机型..." class="px-3 py-1.5 border rounded text-sm w-64 outline-none focus:ring-2 focus:ring-blue-500">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+        <h1 class="text-xl md:text-3xl font-bold text-gray-800 truncate w-full md:w-auto">短信管理面板</h1>
+        <div class="flex flex-wrap items-center gap-2 flex-shrink-0 w-full md:w-auto">
+            <input v-model="searchKeyword" @keyup.enter="handleSearch" type="text" placeholder="搜索内容、发件人、手机号、机型..." class="px-3 py-1.5 border rounded text-sm flex-1 md:w-64 outline-none focus:ring-2 focus:ring-blue-500 min-w-0">
             <button @click="handleSearch" class="px-3 py-1.5 md:px-4 md:py-2 bg-green-500 text-white rounded hover:bg-green-600 transition text-sm whitespace-nowrap">搜索</button>
             <button v-if="isSearching" @click="clearSearch" class="px-3 py-1.5 md:px-4 md:py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition text-sm whitespace-nowrap">清空</button>
             <button @click="fetchGroupedSMS" class="px-3 py-1.5 md:px-4 md:py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition text-sm whitespace-nowrap">刷新</button>
@@ -46,8 +46,30 @@
       <!-- 搜索结果 -->
       <div v-if="isSearching && searchResults.length > 0" class="mb-8">
         <h2 class="text-lg font-bold text-gray-800 mb-4">🔍 搜索结果 (共 {{ searchTotal }} 条)</h2>
-        <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
-          <table class="min-w-full divide-y divide-gray-200 table-fixed">
+        
+        <!-- 移动端卡片视图 -->
+        <div class="md:hidden space-y-3">
+          <div v-for="sms in searchResults" :key="sms.id" class="bg-white p-4 rounded-lg shadow border">
+            <div class="flex justify-between items-start mb-2">
+              <input type="checkbox" :value="sms.id" v-model="selectedIds" class="w-4 h-4 mt-1">
+              <div class="flex-1 ml-2">
+                <div class="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>{{ sms.sendTime }}</span>
+                  <span class="text-blue-600">{{ sms.device || '-' }}</span>
+                </div>
+                <div class="text-sm font-medium text-gray-900 mb-1">{{ sms.sender || '未知' }}</div>
+                <p class="text-sm text-gray-700 break-words">{{ sms.content }}</p>
+                <div class="text-xs text-gray-500 mt-2">{{ sms.phone || '-' }}</div>
+              </div>
+              <button @click="deleteSMS(sms.id)" class="text-red-600 text-sm ml-2 flex-shrink-0">删除</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- PC端表格 -->
+        <div class="hidden md:block bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 table-fixed">
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
@@ -81,6 +103,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
         <!-- 分页 -->
         <div v-if="searchTotal > searchPageSize" class="mt-4 flex justify-center gap-2">
@@ -98,8 +121,30 @@
       <!-- 最新记录 -->
       <div v-if="latestSMS.length > 0" class="mb-8">
         <h2 class="text-lg font-bold text-gray-800 mb-4">🔥 最新记录</h2>
-        <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
-          <table class="min-w-full divide-y divide-gray-200 table-fixed">
+        
+        <!-- 移动端卡片视图 -->
+        <div class="md:hidden space-y-3">
+          <div v-for="sms in latestSMS" :key="sms.id" class="bg-white p-4 rounded-lg shadow border">
+            <div class="flex justify-between items-start mb-2">
+              <input type="checkbox" :value="sms.id" v-model="selectedIds" class="w-4 h-4 mt-1">
+              <div class="flex-1 ml-2">
+                <div class="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>{{ sms.sendTime }}</span>
+                  <span class="text-blue-600">{{ sms.device || '-' }}</span>
+                </div>
+                <div class="text-sm font-medium text-gray-900 mb-1">{{ sms.sender || '未知' }}</div>
+                <p class="text-sm text-gray-700 break-words">{{ sms.content }}</p>
+                <div class="text-xs text-gray-500 mt-2">{{ sms.phone || '-' }}</div>
+              </div>
+              <button @click="deleteSMS(sms.id)" class="text-red-600 text-sm ml-2 flex-shrink-0">删除</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- PC端表格 -->
+        <div class="hidden md:block bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 table-fixed">
             <thead class="bg-gray-50">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
@@ -133,6 +178,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
         <!-- 最新记录 - 显示更多/显示全部 -->
         <div class="mt-4 text-center flex justify-center gap-2">
@@ -151,18 +197,37 @@
 
       <!-- 分组列表 -->
       <div v-if="groupedSMS.length > 0" class="space-y-8">
-        <div v-for="group in groupedSMS" :key="group.device" class="bg-white shadow rounded-lg border border-gray-200 p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-bold text-gray-800">
+        <div v-for="group in groupedSMS" :key="group.device" class="bg-white shadow rounded-lg border border-gray-200 p-4 md:p-6">
+          <div @click="toggleCollapse(group.device)" class="flex items-center justify-between mb-4 cursor-pointer select-none hover:bg-gray-50 rounded p-2 -m-2 transition">
+            <h3 class="text-base md:text-lg font-bold text-gray-800 flex items-center gap-2">
+              <span class="text-blue-500">{{ group.collapsed ? '▶' : '▼' }}</span>
               📱 {{ group.device }} 
-              <span class="text-sm font-normal text-gray-500">(共 {{ group.total }} 条)</span>
+              <span class="text-xs md:text-sm font-normal text-gray-500">(共 {{ group.total }} 条)</span>
             </h3>
-            <input type="checkbox" @change="toggleSelectAll(group.device, $event)" :checked="isAllSelected(group.device)" class="w-4 h-4">
+            <input type="checkbox" @click.stop @change="toggleSelectAll(group.device, $event)" :checked="isAllSelected(group.device)" class="w-4 h-4">
           </div>
           
-          <!-- 分组表格 -->
-          <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 table-fixed">
+          <!-- 分组表格 - 折叠时隐藏 -->
+          <div v-if="!group.collapsed">
+            <!-- 移动端卡片视图 -->
+            <div class="md:hidden space-y-3">
+              <div v-for="sms in group.smsList" :key="sms.id" class="bg-white p-4 rounded-lg shadow border">
+                <div class="flex justify-between items-start mb-2">
+                  <input type="checkbox" :value="sms.id" v-model="selectedIds" class="w-4 h-4 mt-1">
+                  <div class="flex-1 ml-2">
+                    <div class="text-xs text-gray-500 mb-1">{{ sms.sendTime }}</div>
+                    <div class="text-sm font-medium text-gray-900 mb-1">{{ sms.sender || '未知' }}</div>
+                    <p class="text-sm text-gray-700 break-words">{{ sms.content }}</p>
+                    <div class="text-xs text-gray-500 mt-2">{{ sms.phone || '-' }}</div>
+                  </div>
+                  <button @click="deleteSMS(sms.id)" class="text-red-600 text-sm ml-2 flex-shrink-0">删除</button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- PC端表格 -->
+            <div class="hidden md:block overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200 table-fixed">
               <thead class="bg-gray-50">
                 <tr>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12"></th>
@@ -192,10 +257,11 @@
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
 
           <!-- 显示更多/显示全部按钮 -->
-          <div v-if="group.hasMore || !group.showAll" class="mt-4 text-center flex justify-center gap-2">
+          <div v-if="(!group.collapsed) && (group.hasMore || !group.showAll)" class="mt-4 text-center flex justify-center gap-2">
             <button 
               v-if="!group.showAll"
               @click="loadMore(group.device)" 
@@ -213,7 +279,7 @@
               显示全部
             </button>
           </div>
-          <div v-else class="mt-4 text-center">
+          <div v-else-if="!group.collapsed" class="mt-4 text-center">
             <span class="text-gray-500 text-sm">已显示全部 ({{ group.total }} 条)</span>
           </div>
         </div>
@@ -249,6 +315,7 @@ interface GroupedSMS {
   loading?: boolean
   offset?: number
   showAll?: boolean
+  collapsed?: boolean
 }
 
 const latestSMS = ref<SMS[]>([])
@@ -332,7 +399,8 @@ const fetchGroupedSMS = async () => {
       ...group,
       loading: false,
       offset: 10,
-      showAll: false
+      showAll: false,
+      collapsed: true // 其他分组默认折叠
     }))
     selectedIds.value = [] // 清空选中
     // 重置最新记录状态
@@ -444,6 +512,14 @@ watch(searchPage, () => {
     executeSearch()
   }
 })
+
+// 切换分组折叠状态
+const toggleCollapse = (device: string) => {
+  const group = groupedSMS.value.find(g => g.device === device)
+  if (group) {
+    group.collapsed = !group.collapsed
+  }
+}
 
 const loadMore = async (device: string) => {
   const group = groupedSMS.value.find(g => g.device === device)

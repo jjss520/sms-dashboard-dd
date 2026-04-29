@@ -1,4 +1,12 @@
-# Stage 1: Build the Go backend
+# Stage 1: Build the frontend
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/web
+COPY web/package*.json ./
+RUN npm ci
+COPY web/ ./
+RUN npm run build
+
+# Stage 2: Build the Go backend
 FROM golang:1.23-alpine AS backend-builder
 WORKDIR /app
 
@@ -10,7 +18,8 @@ RUN apk add --no-cache git
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-# The local 'web/dist' directory must already exist (built by 'npm run build' locally)
+# Copy built frontend from stage 1
+COPY --from=frontend-builder /app/web/dist ./web/dist
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux go build -o sms-dashboard ./cmd/server/main.go
 
