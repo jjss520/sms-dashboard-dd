@@ -1,0 +1,37 @@
+# Database
+*.db
+data/
+
+# Build artifacts
+sms-dashboard
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Node modules
+node_modules/
+web/node_modules/
+web/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment variables
+.env
+.env.local
+
+# Test files
+test_sms.ps1
