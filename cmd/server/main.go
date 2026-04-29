@@ -20,28 +20,15 @@ func main() {
 
 	database.InitDB(cfg.DatabasePath)
 
-	// API Router (only API routes)
-	apiRouter := setupAPIRouter(cfg)
+	r := setupRouter(cfg)
 
-	// Web Router (only frontend)
-	webRouter := setupWebRouter(cfg)
-
-	// Start API server
-	go func() {
-		log.Printf("API Server starting on port %s", cfg.Port)
-		if err := apiRouter.Run(":" + cfg.Port); err != nil {
-			log.Fatal(err)
-		}
-	}()
-
-	// Start Web server
-	log.Printf("Web Panel starting on port %s", cfg.WebPort)
-	if err := webRouter.Run(":" + cfg.WebPort); err != nil {
+	log.Printf("Server starting on port %s", cfg.Port)
+	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func setupAPIRouter(cfg *config.Config) *gin.Engine {
+func setupRouter(cfg *config.Config) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 
@@ -84,13 +71,6 @@ func setupAPIRouter(cfg *config.Config) *gin.Engine {
 			authorized.GET("/sms/search", smsHandler.Search)
 		}
 	}
-
-	return r
-}
-
-func setupWebRouter(cfg *config.Config) *gin.Engine {
-	r := gin.New()
-	r.Use(gin.Recovery())
 
 	// Serve Frontend
 	distFS, err := fs.Sub(web.DistFS, "dist")
