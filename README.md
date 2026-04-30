@@ -53,7 +53,7 @@
 ```bash
 docker run -d \
   -p 8080:8080 \
-  -v /your/local/path/data:/app/data \
+  -v /your/local/path/data:/data \
   -e API_TOKEN=your_secret_token \
   -e JWT_SECRET=your_jwt_secret_key \
   --name sms-dashboard \

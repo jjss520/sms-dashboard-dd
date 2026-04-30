@@ -30,14 +30,14 @@ RUN apk add --no-cache ca-certificates tzdata \
     && echo "Asia/Shanghai" > /etc/timezone
 WORKDIR /app
 # Create data directory for SQLite persistence
-RUN mkdir -p /app/data
+RUN mkdir -p /data
 COPY --from=backend-builder /app/sms-dashboard .
 
 # Set default environment variables
 ENV PORT=8080
 ENV API_TOKEN=default-api-token
 ENV JWT_SECRET=default-jwt-secret
-ENV DB_PATH=/app/data/sms.db
+ENV DB_PATH=/data/sms.db
 ENV GIN_MODE=release
 ENV SECRET=defaultSecret
 
@@ -45,7 +45,7 @@ ENV SECRET=defaultSecret
 EXPOSE 8080
 
 # Volume for persistence
-VOLUME /app/data
+VOLUME /data
 
 # Run the app
 CMD ["./sms-dashboard"]
