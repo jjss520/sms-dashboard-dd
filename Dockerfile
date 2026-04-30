@@ -35,11 +35,11 @@ COPY --from=backend-builder /app/sms-dashboard .
 
 # Set default environment variables
 ENV PORT=8080
-ENV API_TOKEN=default-api-token
-ENV JWT_SECRET=default-jwt-secret
+ENV API_TOKEN=uyejxhhshfe
+ENV JWT_SECRET=jwdesxxdf817D
 ENV DB_PATH=/data/sms.db
 ENV GIN_MODE=release
-ENV SECRET=defaultSecret
+ENV SECRET=smsadmin
 
 # Expose port
 EXPOSE 8080
