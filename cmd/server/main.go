@@ -35,6 +35,12 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 
 	// Request logging middleware
 	r.Use(func(c *gin.Context) {
+		// Only log POST /api/sms (SMS receive endpoint)
+		if !(c.Request.Method == "POST" && c.Request.URL.Path == "/api/sms") {
+			c.Next()
+			return
+		}
+
 		start := time.Now()
 		path := c.Request.URL.Path
 		query := c.Request.URL.RawQuery
@@ -44,7 +50,8 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 		if c.Request.Method == "POST" || c.Request.Method == "PUT" {
 			bodyBytes, err := io.ReadAll(c.Request.Body)
 			if err == nil {
-				requestBody = string(bodyBytes)
+				// Format JSON to single line
+				requestBody = strings.ReplaceAll(strings.ReplaceAll(string(bodyBytes), "\n", ""), "  ", "")
 				// Restore body for downstream handlers
 				c.Request.Body = io.NopCloser(strings.NewReader(requestBody))
 			}
@@ -56,37 +63,30 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 		clientIP := c.ClientIP()
 		method := c.Request.Method
 		statusCode := c.Writer.Status()
-		userAgent := c.Request.UserAgent()
 
 		if query != "" {
 			path = path + "?" + query
 		}
 
-		// Log with request body if present
+		// Log in single line
 		if requestBody != "" {
-			// Truncate long body to avoid excessive logging
-			if len(requestBody) > 500 {
-				requestBody = requestBody[:500] + "..."
-			}
-			log.Printf("[%s] %s %s %s %d %v \"%s\" Body: %s",
+			log.Printf("[%s] %s %s %s %d %v Body: %s",
 				start.Format("2006-01-02 15:04:05"),
 				clientIP,
 				method,
 				path,
 				statusCode,
 				latency,
-				userAgent,
 				requestBody,
 			)
 		} else {
-			log.Printf("[%s] %s %s %s %d %v \"%s\"",
+			log.Printf("[%s] %s %s %s %d %v",
 				start.Format("2006-01-02 15:04:05"),
 				clientIP,
 				method,
 				path,
 				statusCode,
 				latency,
-				userAgent,
 			)
 		}
 	})
