@@ -11,6 +11,7 @@ import (
 	"sms-dashboard/internal/middleware"
 	"sms-dashboard/web"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,6 +32,64 @@ func main() {
 func setupRouter(cfg *config.Config) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
+
+	// Request logging middleware
+	r.Use(func(c *gin.Context) {
+		start := time.Now()
+		path := c.Request.URL.Path
+		query := c.Request.URL.RawQuery
+
+		// Read request body for POST/PUT requests
+		var requestBody string
+		if c.Request.Method == "POST" || c.Request.Method == "PUT" {
+			bodyBytes, err := io.ReadAll(c.Request.Body)
+			if err == nil {
+				requestBody = string(bodyBytes)
+				// Restore body for downstream handlers
+				c.Request.Body = io.NopCloser(strings.NewReader(requestBody))
+			}
+		}
+
+		c.Next()
+
+		latency := time.Since(start)
+		clientIP := c.ClientIP()
+		method := c.Request.Method
+		statusCode := c.Writer.Status()
+		userAgent := c.Request.UserAgent()
+
+		if query != "" {
+			path = path + "?" + query
+		}
+
+		// Log with request body if present
+		if requestBody != "" {
+			// Truncate long body to avoid excessive logging
+			if len(requestBody) > 500 {
+				requestBody = requestBody[:500] + "..."
+			}
+			log.Printf("[%s] %s %s %s %d %v \"%s\" Body: %s",
+				start.Format("2006-01-02 15:04:05"),
+				clientIP,
+				method,
+				path,
+				statusCode,
+				latency,
+				userAgent,
+				requestBody,
+			)
+		} else {
+			log.Printf("[%s] %s %s %s %d %v \"%s\"",
+				start.Format("2006-01-02 15:04:05"),
+				clientIP,
+				method,
+				path,
+				statusCode,
+				latency,
+				userAgent,
+			)
+		}
+	})
 
 	// CORS middleware
 	r.Use(func(c *gin.Context) {
