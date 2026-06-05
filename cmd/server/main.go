@@ -45,16 +45,14 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 		path := c.Request.URL.Path
 		query := c.Request.URL.RawQuery
 
-		// Read request body for POST/PUT requests
+		// Read request body without consuming it
 		var requestBody string
-		if c.Request.Method == "POST" || c.Request.Method == "PUT" {
-			bodyBytes, err := io.ReadAll(c.Request.Body)
-			if err == nil {
-				// Format JSON to single line
-				requestBody = strings.ReplaceAll(strings.ReplaceAll(string(bodyBytes), "\n", ""), "  ", "")
-				// Restore body for downstream handlers
-				c.Request.Body = io.NopCloser(strings.NewReader(requestBody))
-			}
+		bodyBytes, err := io.ReadAll(c.Request.Body)
+		if err == nil {
+			// Format JSON to single line
+			requestBody = strings.ReplaceAll(strings.ReplaceAll(string(bodyBytes), "\n", ""), "  ", "")
+			// Restore body for downstream handlers
+			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 		}
 
 		c.Next()
