@@ -50,8 +50,8 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 		var requestBody string
 		bodyBytes, err := io.ReadAll(c.Request.Body)
 		if err == nil {
-			// Format JSON to single line
-			requestBody = strings.ReplaceAll(strings.ReplaceAll(string(bodyBytes), "\n", ""), "  ", "")
+			// Keep original format for logging (don't modify)
+			requestBody = string(bodyBytes)
 			// Restore body for downstream handlers
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 		}
