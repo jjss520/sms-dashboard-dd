@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"io"
 	"io/fs"
 	"log"
@@ -116,21 +115,23 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 
 // logSMSRequest logs SMS receive requests after handler execution
 func logSMSRequest(c *gin.Context) {
-	start := c.Get("startTime")
-	if startTime, ok := start.(time.Time); ok {
-		latency := time.Since(startTime)
-		clientIP := c.ClientIP()
-		method := c.Request.Method
-		path := c.Request.URL.Path
-		statusCode := c.Writer.Status()
+	start, exists := c.Get("startTime")
+	if exists {
+		if startTime, ok := start.(time.Time); ok {
+			latency := time.Since(startTime)
+			clientIP := c.ClientIP()
+			method := c.Request.Method
+			path := c.Request.URL.Path
+			statusCode := c.Writer.Status()
 
-		log.Printf("[%s] %s %s %s %d %v",
-			startTime.Format("2006-01-02 15:04:05"),
-			clientIP,
-			method,
-			path,
-			statusCode,
-			latency,
-		)
+			log.Printf("[%s] %s %s %s %d %v",
+				startTime.Format("2006-01-02 15:04:05"),
+				clientIP,
+				method,
+				path,
+				statusCode,
+				latency,
+			)
+		}
 	}
 }
