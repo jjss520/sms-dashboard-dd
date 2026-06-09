@@ -34,62 +34,6 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	// Request logging middleware
-	r.Use(func(c *gin.Context) {
-		// Only log POST /api/sms (SMS receive endpoint)
-		if !(c.Request.Method == "POST" && c.Request.URL.Path == "/api/sms") {
-			c.Next()
-			return
-		}
-
-		start := time.Now()
-		path := c.Request.URL.Path
-		query := c.Request.URL.RawQuery
-
-		// Read request body without consuming it
-		var requestBody string
-		bodyBytes, err := io.ReadAll(c.Request.Body)
-		if err == nil {
-			// Keep original format for logging (don't modify)
-			requestBody = string(bodyBytes)
-			// Restore body for downstream handlers
-			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-		}
-
-		c.Next()
-
-		latency := time.Since(start)
-		clientIP := c.ClientIP()
-		method := c.Request.Method
-		statusCode := c.Writer.Status()
-
-		if query != "" {
-			path = path + "?" + query
-		}
-
-		// Log in single line
-		if requestBody != "" {
-			log.Printf("[%s] %s %s %s %d %v Body: %s",
-				start.Format("2006-01-02 15:04:05"),
-				clientIP,
-				method,
-				path,
-				statusCode,
-				latency,
-				requestBody,
-			)
-		} else {
-			log.Printf("[%s] %s %s %s %d %v",
-				start.Format("2006-01-02 15:04:05"),
-				clientIP,
-				method,
-				path,
-				statusCode,
-				latency,
-			)
-		}
-	})
-
 	// CORS middleware
 	r.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
@@ -113,7 +57,7 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 	api := r.Group("/api")
 	{
 		api.POST("/login", authHandler.Login)
-		api.POST("/sms", middleware.APITokenMiddleware(cfg), smsHandler.Receive)
+		api.POST("/sms", middleware.APITokenMiddleware(cfg), smsHandler.Receive, logSMSRequest)
 
 		// Private (Protected by JWT)
 		authorized := api.Group("/")
@@ -168,4 +112,25 @@ func setupRouter(cfg *config.Config) *gin.Engine {
 	})
 
 	return r
+}
+
+// logSMSRequest logs SMS receive requests after handler execution
+func logSMSRequest(c *gin.Context) {
+	start := c.Get("startTime")
+	if startTime, ok := start.(time.Time); ok {
+		latency := time.Since(startTime)
+		clientIP := c.ClientIP()
+		method := c.Request.Method
+		path := c.Request.URL.Path
+		statusCode := c.Writer.Status()
+
+		log.Printf("[%s] %s %s %s %d %v",
+			startTime.Format("2006-01-02 15:04:05"),
+			clientIP,
+			method,
+			path,
+			statusCode,
+			latency,
+		)
+	}
 }

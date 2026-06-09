@@ -19,6 +19,9 @@ func NewSMSHandler() *SMSHandler {
 }
 
 func (h *SMSHandler) Receive(c *gin.Context) {
+	// Record start time for logging
+	c.Set("startTime", time.Now())
+
 	var req struct {
 		Content     string `json:"content" form:"content" binding:"required"`
 		SendTime    string `json:"sendTime" form:"sendTime"`
